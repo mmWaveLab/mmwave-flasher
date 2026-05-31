@@ -1,0 +1,362 @@
+import { LineEdit, ScrollView } from "std-widgets.slint";
+
+component CuteButton inherits Rectangle {
+    in property <string> label;
+    in property <bool> enabled: true;
+    in property <bool> active: false;
+    callback clicked;
+
+    height: 36px;
+    border-radius: 10px;
+    background: !root.enabled ? #f6f1f4 : root.active ? #ffe4ed : touch.pressed ? #ffd6e3 : touch.has-hover ? #fff0f5 : #ffffff;
+    border-width: 1px;
+    border-color: root.active ? #ff9fba : #f0dfe6;
+    opacity: root.enabled ? 1.0 : 0.55;
+    animate background { duration: 100ms; easing: ease-out; }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+
+    Text {
+        text: root.label;
+        color: root.enabled ? #5d4050 : #9a8d96;
+        font-size: 12px;
+        font-weight: 760;
+        horizontal-alignment: center;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+}
+
+component ToggleRow inherits Rectangle {
+    in-out property <bool> checked;
+    in property <string> label;
+    in property <bool> enabled: true;
+
+    height: 30px;
+    background: transparent;
+    opacity: root.enabled ? 1.0 : 0.55;
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        clicked => { root.checked = !root.checked; }
+        mouse-cursor: root.enabled ? pointer : default;
+    }
+
+    HorizontalLayout {
+        spacing: 8px;
+        Rectangle {
+            width: 22px;
+            height: 22px;
+            border-radius: 7px;
+            background: root.checked ? #bfe8d0 : #ffffff;
+            border-width: 1px;
+            border-color: root.checked ? #6bb885 : #e1d3dc;
+            Text {
+                text: root.checked ? "✓" : "";
+                color: #256f45;
+                font-size: 15px;
+                font-weight: 850;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+        }
+        Text {
+            text: root.label;
+            color: #5d5260;
+            font-size: 12px;
+            font-weight: 650;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+    }
+}
+
+export component AppWindow inherits Window {
+    in-out property <string> port-text: "";
+    in-out property <[string]> port-options: [];
+    in-out property <string> file-text: "";
+    in-out property <int> meta-slot: 1;
+    in-out property <bool> erase-first: true;
+    in-out property <bool> verify-status: true;
+    in-out property <bool> busy: false;
+    in-out property <int> progress: 0;
+    in-out property <string> status-text: "Ready";
+    in-out property <string> log-text: "Select a merged metaImage .bin, choose the UART port, then flash.";
+    callback browse-file();
+    callback scan-ports();
+    callback select-port(int);
+    callback start-flash();
+
+    title: "MeowWave Flash";
+    width: 760px;
+    height: 520px;
+    background: #fffaf6;
+
+    Rectangle {
+        background: #fffaf6;
+
+        VerticalLayout {
+            padding: 22px;
+            spacing: 16px;
+
+            HorizontalLayout {
+                spacing: 14px;
+
+                Rectangle {
+                    width: 58px;
+                    height: 58px;
+                    border-radius: 18px;
+                    background: #ffe7ee;
+                    border-width: 1px;
+                    border-color: #ffd0dc;
+
+                    Text {
+                        text: "MW";
+                        color: #9b3152;
+                        font-size: 20px;
+                        font-weight: 850;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                    }
+                }
+
+                VerticalLayout {
+                    spacing: 3px;
+                    Text {
+                        text: "MeowWave Flash";
+                        color: #22223a;
+                        font-size: 26px;
+                        font-weight: 850;
+                    }
+                    Text {
+                        text: "Tiny UART ROM flasher for TI classic xWR / IWR / AWR mmWave metaImage binaries.";
+                        color: #7b7080;
+                        font-size: 12px;
+                    }
+                }
+
+                Rectangle { horizontal-stretch: 1; }
+
+                Rectangle {
+                    width: 126px;
+                    height: 34px;
+                    border-radius: 17px;
+                    background: root.busy ? #fff2cc : #e9f8ef;
+                    border-width: 1px;
+                    border-color: root.busy ? #efd37a : #badfc8;
+                    animate background { duration: 120ms; easing: ease-out; }
+
+                    Text {
+                        text: root.status-text;
+                        color: root.busy ? #8f6b00 : #246b43;
+                        font-size: 12px;
+                        font-weight: 760;
+                        horizontal-alignment: center;
+                        vertical-alignment: center;
+                        overflow: elide;
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 1px;
+                background: #f2dfe6;
+            }
+
+            HorizontalLayout {
+                spacing: 16px;
+
+                Rectangle {
+                    width: 312px;
+                    border-radius: 12px;
+                    background: #ffffff;
+                    border-width: 1px;
+                    border-color: #f0dfe6;
+
+                    VerticalLayout {
+                        padding: 16px;
+                        spacing: 12px;
+
+                        Text { text: "Target"; color: #25223a; font-size: 16px; font-weight: 820; }
+
+                        Text { text: "Serial Port"; color: #6f6474; font-size: 11px; font-weight: 700; }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Rectangle {
+                                horizontal-stretch: 1;
+                                height: 36px;
+                                border-radius: 10px;
+                                background: #fffdfd;
+                                border-width: 1px;
+                                border-color: #f0dfe6;
+                                if root.port-text == "": Text {
+                                    x: 12px;
+                                    y: 0px;
+                                    height: parent.height;
+                                    text: "/dev/cu.usbserial-xxxx";
+                                    color: #b7a8b3;
+                                    font-size: 12px;
+                                    vertical-alignment: center;
+                                }
+                                LineEdit {
+                                    x: 8px;
+                                    y: 2px;
+                                    width: parent.width - 16px;
+                                    height: parent.height - 4px;
+                                    text <=> root.port-text;
+                                    enabled: !root.busy;
+                                }
+                            }
+                            CuteButton {
+                                width: 76px;
+                                label: "Scan";
+                                enabled: !root.busy;
+                                clicked => { root.scan-ports(); }
+                            }
+                        }
+
+                        if root.port-options.length > 0: Rectangle {
+                            height: 76px;
+                            border-radius: 10px;
+                            background: #fffafc;
+                            border-width: 1px;
+                            border-color: #f0dfe6;
+                            ScrollView {
+                                width: parent.width;
+                                height: parent.height;
+                                VerticalLayout {
+                                    padding: 6px;
+                                    spacing: 4px;
+                                    for port[index] in root.port-options: CuteButton {
+                                        height: 28px;
+                                        label: port;
+                                        active: root.port-text == port;
+                                        enabled: !root.busy;
+                                        clicked => { root.select-port(index); }
+                                    }
+                                }
+                            }
+                        }
+
+                        Text { text: "Merged metaImage"; color: #6f6474; font-size: 11px; font-weight: 700; }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            Rectangle {
+                                horizontal-stretch: 1;
+                                height: 36px;
+                                border-radius: 10px;
+                                background: #fffdfd;
+                                border-width: 1px;
+                                border-color: #f0dfe6;
+                                if root.file-text == "": Text {
+                                    x: 12px;
+                                    y: 0px;
+                                    height: parent.height;
+                                    text: "xwr64xx_mmw_demo.bin";
+                                    color: #b7a8b3;
+                                    font-size: 12px;
+                                    vertical-alignment: center;
+                                }
+                                LineEdit {
+                                    x: 8px;
+                                    y: 2px;
+                                    width: parent.width - 16px;
+                                    height: parent.height - 4px;
+                                    text <=> root.file-text;
+                                    enabled: !root.busy;
+                                }
+                            }
+                            CuteButton {
+                                width: 76px;
+                                label: "File";
+                                enabled: !root.busy;
+                                clicked => { root.browse-file(); }
+                            }
+                        }
+
+                        Text { text: "Meta Slot"; color: #6f6474; font-size: 11px; font-weight: 700; }
+                        HorizontalLayout {
+                            spacing: 8px;
+                            CuteButton { horizontal-stretch: 1; label: "1"; enabled: !root.busy; active: root.meta-slot == 1; clicked => { root.meta-slot = 1; } }
+                            CuteButton { horizontal-stretch: 1; label: "2"; enabled: !root.busy; active: root.meta-slot == 2; clicked => { root.meta-slot = 2; } }
+                            CuteButton { horizontal-stretch: 1; label: "3"; enabled: !root.busy; active: root.meta-slot == 3; clicked => { root.meta-slot = 3; } }
+                            CuteButton { horizontal-stretch: 1; label: "4"; enabled: !root.busy; active: root.meta-slot == 4; clicked => { root.meta-slot = 4; } }
+                        }
+
+                        ToggleRow {
+                            label: "Erase serial flash before write";
+                            checked <=> root.erase-first;
+                            enabled: !root.busy;
+                        }
+
+                        ToggleRow {
+                            label: "Verify bootloader ACK / status";
+                            checked <=> root.verify-status;
+                            enabled: !root.busy;
+                        }
+                    }
+                }
+
+                Rectangle {
+                    horizontal-stretch: 1;
+                    border-radius: 12px;
+                    background: #ffffff;
+                    border-width: 1px;
+                    border-color: #f0dfe6;
+
+                    VerticalLayout {
+                        padding: 16px;
+                        spacing: 12px;
+
+                        Text { text: "Download"; color: #25223a; font-size: 16px; font-weight: 820; }
+                        Text { text: "Classic xWR UART ROM · merged metaImage only"; color: #7b7080; font-size: 12px; }
+
+                        Rectangle {
+                            height: 12px;
+                            border-radius: 6px;
+                            background: #f4edf2;
+                            Rectangle {
+                                height: parent.height;
+                                width: max(4px, parent.width * root.progress / 100);
+                                border-radius: 6px;
+                                background: #ff8ca8;
+                                animate width { duration: 160ms; easing: ease-out; }
+                            }
+                        }
+
+                        Rectangle {
+                            vertical-stretch: 1;
+                            border-radius: 10px;
+                            background: #fffafc;
+                            border-width: 1px;
+                            border-color: #f1dde5;
+
+                            Text {
+                                x: 12px;
+                                y: 12px;
+                                width: parent.width - 24px;
+                                height: parent.height - 24px;
+                                text: root.log-text;
+                                color: #51495a;
+                                font-size: 12px;
+                                wrap: word-wrap;
+                                vertical-alignment: top;
+                            }
+                        }
+
+                        CuteButton {
+                            height: 42px;
+                            label: root.busy ? "Flashing..." : "Flash metaImage";
+                            enabled: !root.busy;
+                            clicked => { root.start-flash(); }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

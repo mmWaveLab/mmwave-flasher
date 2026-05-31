@@ -1,0 +1,20 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  rust:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install Linux UI deps
+        run: sudo apt-get update && sudo apt-get install -y libxkbcommon-dev libfontconfig1-dev
+      - name: Format
+        run: cargo fmt --all --check
+      - name: Check
+        run: cargo check
+      - name: Test
+        run: cargo test
