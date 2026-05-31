@@ -13,6 +13,7 @@ pub const MAX_CHUNK_SIZE: usize = 240;
 const SYNC: u8 = 0xaa;
 const ACK: u16 = 0x00cc;
 const STORAGE_SFLASH: u32 = 2;
+const DEFAULT_META_IMAGE_TYPE: u32 = 4;
 
 const CMD_PING: u8 = 0x20;
 const CMD_OPEN_FILE: u8 = 0x21;
@@ -30,7 +31,6 @@ const STATUS_ACCESS_IN_PROGRESS: u8 = 0x4b;
 pub struct FlashConfig {
     pub port: String,
     pub file: String,
-    pub slot: u8,
     pub erase: bool,
     pub verify_status: bool,
     pub baudrate: u32,
@@ -40,53 +40,13 @@ pub struct FlashConfig {
 pub struct FlashSummary {
     pub bytes_written: usize,
     pub chunks_written: usize,
-    pub slot: u8,
     pub rom_version: Option<String>,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MetaImageSlot {
-    Image1,
-    Image2,
-    Image3,
-    Image4,
-}
-
-impl MetaImageSlot {
-    pub fn from_u8(value: u8) -> Result<Self> {
-        match value {
-            1 => Ok(Self::Image1),
-            2 => Ok(Self::Image2),
-            3 => Ok(Self::Image3),
-            4 => Ok(Self::Image4),
-            _ => bail!("meta slot must be 1, 2, 3, or 4"),
-        }
-    }
-
-    fn number(self) -> u8 {
-        match self {
-            Self::Image1 => 1,
-            Self::Image2 => 2,
-            Self::Image3 => 3,
-            Self::Image4 => 4,
-        }
-    }
-
-    fn file_type(self) -> u32 {
-        match self {
-            Self::Image1 => 4,
-            Self::Image2 => 5,
-            Self::Image3 => 6,
-            Self::Image4 => 7,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Copy)]
 pub struct FlashOptions {
     pub erase: bool,
     pub verify_status: bool,
-    pub slot: MetaImageSlot,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -126,7 +86,6 @@ where
         FlashOptions {
             erase: config.erase,
             verify_status: config.verify_status,
-            slot: MetaImageSlot::from_u8(config.slot)?,
         },
         emit_progress,
     )
@@ -169,12 +128,9 @@ where
             .context("erase did not complete")?;
     }
 
-    emit_progress("open", "Opening serial flash image slot", 28)?;
-    send_and_expect_ack(
-        transport,
-        &open_file_command(image.len() as u32, options.slot),
-    )
-    .context("open file command failed")?;
+    emit_progress("open", "Opening default serial flash image", 28)?;
+    send_and_expect_ack(transport, &open_file_command(image.len() as u32))
+        .context("open file command failed")?;
 
     let chunks_total = image.len().div_ceil(MAX_CHUNK_SIZE);
     for (index, chunk) in image.chunks(MAX_CHUNK_SIZE).enumerate() {
@@ -200,7 +156,6 @@ where
     Ok(FlashSummary {
         bytes_written: image.len(),
         chunks_written: chunks_total,
-        slot: options.slot.number(),
         rom_version,
     })
 }
@@ -297,12 +252,12 @@ pub fn simple_command(opcode: u8) -> Vec<u8> {
     frame(&[opcode])
 }
 
-pub fn open_file_command(file_size: u32, slot: MetaImageSlot) -> Vec<u8> {
+pub fn open_file_command(file_size: u32) -> Vec<u8> {
     let mut payload = Vec::with_capacity(17);
     payload.push(CMD_OPEN_FILE);
     payload.extend_from_slice(&file_size.to_be_bytes());
     payload.extend_from_slice(&STORAGE_SFLASH.to_be_bytes());
-    payload.extend_from_slice(&slot.file_type().to_be_bytes());
+    payload.extend_from_slice(&DEFAULT_META_IMAGE_TYPE.to_be_bytes());
     payload.extend_from_slice(&0u32.to_be_bytes());
     frame(&payload)
 }
@@ -363,8 +318,8 @@ mod tests {
     }
 
     #[test]
-    fn builds_open_file_for_meta_image_slot_1() {
-        let command = open_file_command(0x1234_5678, MetaImageSlot::Image1);
+    fn builds_open_file_for_default_meta_image() {
+        let command = open_file_command(0x1234_5678);
         assert_eq!(&command[..4], &[0xaa, 0x00, 0x13, 0x3b]);
         assert_eq!(command[4], CMD_OPEN_FILE);
         assert_eq!(&command[5..9], &0x1234_5678u32.to_be_bytes());
@@ -392,7 +347,6 @@ mod tests {
             FlashOptions {
                 erase: false,
                 verify_status: true,
-                slot: MetaImageSlot::Image1,
             },
             |_, _, _| Ok(()),
         )
@@ -450,11 +404,11 @@ mod tests {
     impl Read for FakeTransport {
         fn read(&mut self, buf: &mut [u8]) -> IoResult<usize> {
             let mut read = 0;
-            for slot in buf.iter_mut() {
+            for cell in buf.iter_mut() {
                 let Some(byte) = self.reads.pop_front() else {
                     break;
                 };
-                *slot = byte;
+                *cell = byte;
                 read += 1;
             }
             Ok(read)

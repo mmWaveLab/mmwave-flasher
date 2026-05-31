@@ -79,13 +79,12 @@ export component AppWindow inherits Window {
     in-out property <string> port-text: "";
     in-out property <[string]> port-options: [];
     in-out property <string> file-text: "";
-    in-out property <int> meta-slot: 1;
     in-out property <bool> erase-first: true;
     in-out property <bool> verify-status: true;
     in-out property <bool> busy: false;
     in-out property <int> progress: 0;
     in-out property <string> status-text: "Ready";
-    in-out property <string> log-text: "Select a merged metaImage .bin, choose the UART port, then flash.";
+    in-out property <string> log-text: "Select a merged image .bin, choose the UART port, then flash.";
     callback browse-file();
     callback scan-ports();
     callback select-port(int);
@@ -242,7 +241,7 @@ export component AppWindow inherits Window {
                             }
                         }
 
-                        Text { text: "Merged metaImage"; color: #6f6474; font-size: 11px; font-weight: 700; }
+                        Text { text: "Merged image (.bin)"; color: #6f6474; font-size: 11px; font-weight: 700; }
                         HorizontalLayout {
                             spacing: 8px;
                             Rectangle {
@@ -278,15 +277,6 @@ export component AppWindow inherits Window {
                             }
                         }
 
-                        Text { text: "Meta Slot"; color: #6f6474; font-size: 11px; font-weight: 700; }
-                        HorizontalLayout {
-                            spacing: 8px;
-                            CuteButton { horizontal-stretch: 1; label: "1"; enabled: !root.busy; active: root.meta-slot == 1; clicked => { root.meta-slot = 1; } }
-                            CuteButton { horizontal-stretch: 1; label: "2"; enabled: !root.busy; active: root.meta-slot == 2; clicked => { root.meta-slot = 2; } }
-                            CuteButton { horizontal-stretch: 1; label: "3"; enabled: !root.busy; active: root.meta-slot == 3; clicked => { root.meta-slot = 3; } }
-                            CuteButton { horizontal-stretch: 1; label: "4"; enabled: !root.busy; active: root.meta-slot == 4; clicked => { root.meta-slot = 4; } }
-                        }
-
                         ToggleRow {
                             label: "Erase serial flash before write";
                             checked <=> root.erase-first;
@@ -313,7 +303,7 @@ export component AppWindow inherits Window {
                         spacing: 12px;
 
                         Text { text: "Download"; color: #25223a; font-size: 16px; font-weight: 820; }
-                        Text { text: "Classic xWR UART ROM · merged metaImage only"; color: #7b7080; font-size: 12px; }
+                        Text { text: "Classic xWR UART ROM · merged image only"; color: #7b7080; font-size: 12px; }
 
                         Rectangle {
                             height: 12px;
@@ -350,7 +340,7 @@ export component AppWindow inherits Window {
 
                         CuteButton {
                             height: 42px;
-                            label: root.busy ? "Flashing..." : "Flash metaImage";
+                            label: root.busy ? "Flashing..." : "Flash image";
                             enabled: !root.busy;
                             clicked => { root.start-flash(); }
                         }

@@ -3,6 +3,7 @@ mod mmwave;
 use anyhow::{Context, Result};
 use clap::{ArgAction, Parser, Subcommand};
 use serde::Serialize;
+use serialport::SerialPortType;
 use slint::{ComponentHandle, Model};
 
 slint::include_modules!();
@@ -38,8 +39,6 @@ struct PlanArgs {
     port: Option<String>,
     #[arg(long)]
     file: String,
-    #[arg(long, default_value_t = 1)]
-    meta_slot: u8,
     #[arg(long, default_value_t = true, action = ArgAction::Set)]
     erase: bool,
     #[arg(long, default_value_t = true, action = ArgAction::Set)]
@@ -56,8 +55,6 @@ struct FlashArgs {
     port: String,
     #[arg(long)]
     file: String,
-    #[arg(long, default_value_t = 1)]
-    meta_slot: u8,
     #[arg(long, default_value_t = mmwave::DEFAULT_BAUDRATE)]
     baudrate: u32,
     #[arg(long, default_value_t = true, action = ArgAction::Set)]
@@ -76,7 +73,6 @@ struct PlanOutput {
     operation: String,
     port: Option<String>,
     file: String,
-    meta_slot: u8,
     baudrate: u32,
     erase: bool,
     verify: bool,
@@ -106,7 +102,7 @@ fn list_ports(json: bool) -> Result<()> {
         .into_iter()
         .map(|port| PortRow {
             name: port.port_name,
-            kind: format!("{:?}", port.port_type),
+            kind: port_kind_label(&port.port_type),
         })
         .collect::<Vec<_>>();
 
@@ -126,7 +122,6 @@ fn flash_cli(args: FlashArgs) -> Result<()> {
     let config = mmwave::FlashConfig {
         port: args.port.clone(),
         file: args.file.clone(),
-        slot: args.meta_slot,
         erase: args.erase,
         verify_status: args.verify,
         baudrate: args.baudrate,
@@ -152,8 +147,8 @@ fn flash_cli(args: FlashArgs) -> Result<()> {
         println!("{}", serde_json::to_string_pretty(&summary)?);
     } else {
         println!(
-            "Flashed {} bytes in {} chunk(s) to slot {}.",
-            summary.bytes_written, summary.chunks_written, summary.slot
+            "Flashed {} bytes in {} chunk(s).",
+            summary.bytes_written, summary.chunks_written
         );
     }
     Ok(())
@@ -167,7 +162,6 @@ fn plan_cli(args: PlanArgs) -> Result<()> {
         println!("Operation: {}", output.operation);
         println!("File: {}", output.file);
         println!("Port: {}", output.port.as_deref().unwrap_or("<required>"));
-        println!("Slot: {}", output.meta_slot);
         if output.blockers.is_empty() {
             println!("Ready to download.");
         } else {
@@ -190,16 +184,11 @@ fn build_plan_output(args: &PlanArgs) -> PlanOutput {
     } else if !std::path::Path::new(&args.file).is_file() {
         blockers.push(format!("metaImage file does not exist: {}", args.file));
     }
-    if !(1..=4).contains(&args.meta_slot) {
-        blockers.push("meta slot must be 1..4".into());
-    }
-
     PlanOutput {
         ok: blockers.is_empty(),
         operation: "download".into(),
         port: args.port.clone(),
         file: args.file.clone(),
-        meta_slot: args.meta_slot,
         baudrate: args.baudrate,
         erase: args.erase,
         verify: args.verify,
@@ -209,7 +198,7 @@ fn build_plan_output(args: &PlanArgs) -> PlanOutput {
             "send UART break",
             "ping ROM bootloader",
             "optional erase serial flash",
-            "open metaImage slot",
+            "open default metaImage",
             "write 240-byte chunks",
             "close image",
             "check ACK/status",
@@ -253,7 +242,7 @@ fn run_ui() -> Result<()> {
                     .collect::<Vec<_>>();
                 let text = ports
                     .iter()
-                    .map(|port| format!("{}  {:?}", port.port_name, port.port_type))
+                    .map(|port| format!("{}  {}", port.port_name, port_kind_label(&port.port_type)))
                     .collect::<Vec<_>>()
                     .join("\n");
                 if let Some(app) = weak.upgrade() {
@@ -297,7 +286,6 @@ fn run_ui() -> Result<()> {
             let config = mmwave::FlashConfig {
                 port: app.get_port_text().to_string(),
                 file: app.get_file_text().to_string(),
-                slot: app.get_meta_slot() as u8,
                 erase: app.get_erase_first(),
                 verify_status: app.get_verify_status(),
                 baudrate: mmwave::DEFAULT_BAUDRATE,
@@ -330,10 +318,9 @@ fn run_ui() -> Result<()> {
                         &worker_weak,
                         "Done",
                         &format!(
-                            "Flash complete.\nBytes: {}\nChunks: {}\nSlot: {}\nROM: {}",
+                            "Flash complete.\nBytes: {}\nChunks: {}\nROM: {}",
                             summary.bytes_written,
                             summary.chunks_written,
-                            summary.slot,
                             summary.rom_version.unwrap_or_else(|| "unknown".into())
                         ),
                         100,
@@ -346,6 +333,22 @@ fn run_ui() -> Result<()> {
     }
 
     app.run().context("UI loop failed")
+}
+
+fn port_kind_label(kind: &SerialPortType) -> String {
+    match kind {
+        SerialPortType::UsbPort(info) => {
+            let mut label = format!("USB {:04x}:{:04x}", info.vid, info.pid);
+            if let Some(product) = info.product.as_deref().filter(|value| !value.is_empty()) {
+                label.push_str(" ");
+                label.push_str(product);
+            }
+            label
+        }
+        SerialPortType::BluetoothPort => "Bluetooth".into(),
+        SerialPortType::PciPort => "System".into(),
+        SerialPortType::Unknown => "Unknown".into(),
+    }
 }
 
 fn post_ui(weak: &slint::Weak<AppWindow>, status: &str, log: &str, progress: i32) {

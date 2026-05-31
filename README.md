@@ -15,7 +15,6 @@ Supported target family:
 - Tested protocol shape for `IWR6843AOP`, `IWR1843`, `IWR1642`, and `AWR1843`
 - Serial UART at `115200`
 - Merged `metaImage.bin` input
-- Meta image slots `1` through `4`
 - Optional serial flash erase before write
 - Bootloader ACK/status verification
 
@@ -31,8 +30,14 @@ Not in scope:
 cargo run
 ```
 
-Pick the UART port, select a merged `metaImage.bin`, choose a slot, then click
-`Flash metaImage`.
+Pick the UART port, select a merged `metaImage.bin`, then click `Flash metaImage`.
+
+Build a double-clickable macOS app bundle:
+
+```bash
+./scripts/package_macos_app.sh
+open "dist/MeowWave Flash.app"
+```
 
 ## CLI
 
@@ -49,7 +54,6 @@ AI dry-run plan:
 cargo run -- plan \
   --port /dev/cu.usbserial-xxxx \
   --file path/to/metaImage.bin \
-  --meta-slot 1 \
   --json
 ```
 
@@ -59,7 +63,6 @@ Flash:
 cargo run -- flash \
   --port /dev/cu.usbserial-xxxx \
   --file path/to/metaImage.bin \
-  --meta-slot 1 \
   --erase true \
   --verify true
 ```
@@ -76,7 +79,6 @@ JSON output:
 cargo run -- flash \
   --port /dev/cu.usbserial-xxxx \
   --file path/to/metaImage.bin \
-  --meta-slot 1 \
   --json
 ```
 
@@ -93,7 +95,7 @@ cargo run -- flash \
 
 Put the board into the classic xWR UART ROM boot mode before flashing. The app
 sends a UART break, pings the ROM bootloader, optionally erases serial flash,
-opens the requested metaImage slot, writes 240-byte chunks, closes the image,
+opens the default metaImage target, writes 240-byte chunks, closes the image,
 and checks bootloader status.
 
 ## Development
