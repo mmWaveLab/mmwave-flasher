@@ -1,16 +1,16 @@
 import { LineEdit, ScrollView } from "std-widgets.slint";
 
-component CuteButton inherits Rectangle {
+component MiniButton inherits Rectangle {
     in property <string> label;
     in property <bool> enabled: true;
     in property <bool> active: false;
     callback clicked;
 
-    height: 36px;
-    border-radius: 10px;
-    background: !root.enabled ? #f6f1f4 : root.active ? #ffe4ed : touch.pressed ? #ffd6e3 : touch.has-hover ? #fff0f5 : #ffffff;
+    height: 32px;
+    border-radius: 8px;
+    background: !root.enabled ? #f7f3f5 : root.active ? #ffe5ed : touch.pressed ? #ffd7e3 : touch.has-hover ? #fff1f6 : #ffffff;
     border-width: 1px;
-    border-color: root.active ? #ff9fba : #f0dfe6;
+    border-color: root.active ? #ff9bb8 : #efdfe6;
     opacity: root.enabled ? 1.0 : 0.55;
     animate background { duration: 100ms; easing: ease-out; }
 
@@ -22,7 +22,7 @@ component CuteButton inherits Rectangle {
 
     Text {
         text: root.label;
-        color: root.enabled ? #5d4050 : #9a8d96;
+        color: root.enabled ? #55394a : #a2969e;
         font-size: 12px;
         font-weight: 760;
         horizontal-alignment: center;
@@ -31,34 +31,34 @@ component CuteButton inherits Rectangle {
     }
 }
 
-component ToggleRow inherits Rectangle {
+component MiniToggle inherits Rectangle {
     in-out property <bool> checked;
     in property <string> label;
     in property <bool> enabled: true;
 
-    height: 30px;
+    height: 28px;
     background: transparent;
     opacity: root.enabled ? 1.0 : 0.55;
 
     touch := TouchArea {
         enabled: root.enabled;
-        clicked => { root.checked = !root.checked; }
         mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.checked = !root.checked; }
     }
 
     HorizontalLayout {
-        spacing: 8px;
+        spacing: 7px;
         Rectangle {
-            width: 22px;
-            height: 22px;
-            border-radius: 7px;
-            background: root.checked ? #bfe8d0 : #ffffff;
+            width: 20px;
+            height: 20px;
+            border-radius: 6px;
+            background: root.checked ? #bde8cf : #ffffff;
             border-width: 1px;
-            border-color: root.checked ? #6bb885 : #e1d3dc;
+            border-color: root.checked ? #68b681 : #e4d8df;
             Text {
                 text: root.checked ? "✓" : "";
-                color: #256f45;
-                font-size: 15px;
+                color: #266f46;
+                font-size: 14px;
                 font-weight: 850;
                 horizontal-alignment: center;
                 vertical-alignment: center;
@@ -75,6 +75,38 @@ component ToggleRow inherits Rectangle {
     }
 }
 
+component MiniInput inherits Rectangle {
+    in-out property <string> value;
+    in property <string> placeholder;
+    in property <bool> enabled: true;
+
+    height: 34px;
+    border-radius: 8px;
+    background: #fffdfd;
+    border-width: 1px;
+    border-color: #efdfe6;
+
+    if root.value == "": Text {
+        x: 10px;
+        y: 0px;
+        height: parent.height;
+        text: root.placeholder;
+        color: #b7a8b3;
+        font-size: 12px;
+        vertical-alignment: center;
+        overflow: elide;
+    }
+
+    LineEdit {
+        x: 7px;
+        y: 2px;
+        width: parent.width - 14px;
+        height: parent.height - 4px;
+        text <=> root.value;
+        enabled: root.enabled;
+    }
+}
+
 export component AppWindow inherits Window {
     in-out property <string> port-text: "";
     in-out property <[string]> port-options: [];
@@ -84,31 +116,31 @@ export component AppWindow inherits Window {
     in-out property <bool> busy: false;
     in-out property <int> progress: 0;
     in-out property <string> status-text: "Ready";
-    in-out property <string> log-text: "Select a merged image .bin, choose the UART port, then flash.";
+    in-out property <string> log-text: "Select serial port and merged image.";
     callback browse-file();
     callback scan-ports();
     callback select-port(int);
     callback start-flash();
 
     title: "MeowWave Flash";
-    width: 760px;
-    height: 520px;
-    background: #fffaf6;
+    width: 420px;
+    height: 392px;
+    background: #fffaf7;
 
     Rectangle {
-        background: #fffaf6;
+        background: #fffaf7;
 
         VerticalLayout {
-            padding: 22px;
-            spacing: 16px;
+            padding: 16px;
+            spacing: 10px;
 
             HorizontalLayout {
-                spacing: 14px;
+                spacing: 10px;
 
                 Rectangle {
-                    width: 58px;
-                    height: 58px;
-                    border-radius: 18px;
+                    width: 38px;
+                    height: 38px;
+                    border-radius: 13px;
                     background: #ffe7ee;
                     border-width: 1px;
                     border-color: #ffd0dc;
@@ -116,7 +148,7 @@ export component AppWindow inherits Window {
                     Text {
                         text: "MW";
                         color: #9b3152;
-                        font-size: 20px;
+                        font-size: 15px;
                         font-weight: 850;
                         horizontal-alignment: center;
                         vertical-alignment: center;
@@ -124,26 +156,26 @@ export component AppWindow inherits Window {
                 }
 
                 VerticalLayout {
-                    spacing: 3px;
+                    spacing: 1px;
                     Text {
                         text: "MeowWave Flash";
                         color: #22223a;
-                        font-size: 26px;
+                        font-size: 20px;
                         font-weight: 850;
                     }
                     Text {
-                        text: "Tiny UART ROM flasher for TI classic xWR / IWR / AWR mmWave metaImage binaries.";
+                        text: "TI mmWave UART image flasher";
                         color: #7b7080;
-                        font-size: 12px;
+                        font-size: 11px;
                     }
                 }
 
                 Rectangle { horizontal-stretch: 1; }
 
                 Rectangle {
-                    width: 126px;
-                    height: 34px;
-                    border-radius: 17px;
+                    width: 92px;
+                    height: 30px;
+                    border-radius: 15px;
                     background: root.busy ? #fff2cc : #e9f8ef;
                     border-width: 1px;
                     border-color: root.busy ? #efd37a : #badfc8;
@@ -163,189 +195,124 @@ export component AppWindow inherits Window {
 
             Rectangle {
                 height: 1px;
-                background: #f2dfe6;
+                background: #f1dfe6;
             }
 
-            HorizontalLayout {
-                spacing: 16px;
+            VerticalLayout {
+                spacing: 9px;
 
-                Rectangle {
-                    width: 312px;
-                    border-radius: 12px;
-                    background: #ffffff;
+                Text { text: "Serial"; color: #6f6474; font-size: 10px; font-weight: 740; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    MiniInput {
+                        horizontal-stretch: 1;
+                        value <=> root.port-text;
+                        placeholder: "/dev/cu.usbserial";
+                        enabled: !root.busy;
+                    }
+                    MiniButton {
+                        width: 70px;
+                        label: "Scan";
+                        enabled: !root.busy;
+                        clicked => { root.scan-ports(); }
+                    }
+                }
+
+                if root.port-options.length > 0: Rectangle {
+                    height: 60px;
+                    border-radius: 8px;
+                    background: #fffafd;
                     border-width: 1px;
                     border-color: #f0dfe6;
-
-                    VerticalLayout {
-                        padding: 16px;
-                        spacing: 12px;
-
-                        Text { text: "Target"; color: #25223a; font-size: 16px; font-weight: 820; }
-
-                        Text { text: "Serial Port"; color: #6f6474; font-size: 11px; font-weight: 700; }
-                        HorizontalLayout {
-                            spacing: 8px;
-                            Rectangle {
-                                horizontal-stretch: 1;
-                                height: 36px;
-                                border-radius: 10px;
-                                background: #fffdfd;
-                                border-width: 1px;
-                                border-color: #f0dfe6;
-                                if root.port-text == "": Text {
-                                    x: 12px;
-                                    y: 0px;
-                                    height: parent.height;
-                                    text: "/dev/cu.usbserial-xxxx";
-                                    color: #b7a8b3;
-                                    font-size: 12px;
-                                    vertical-alignment: center;
-                                }
-                                LineEdit {
-                                    x: 8px;
-                                    y: 2px;
-                                    width: parent.width - 16px;
-                                    height: parent.height - 4px;
-                                    text <=> root.port-text;
-                                    enabled: !root.busy;
-                                }
-                            }
-                            CuteButton {
-                                width: 76px;
-                                label: "Scan";
+                    ScrollView {
+                        width: parent.width;
+                        height: parent.height;
+                        VerticalLayout {
+                            padding: 5px;
+                            spacing: 4px;
+                            for port[index] in root.port-options: MiniButton {
+                                height: 25px;
+                                label: port;
+                                active: root.port-text == port;
                                 enabled: !root.busy;
-                                clicked => { root.scan-ports(); }
+                                clicked => { root.select-port(index); }
                             }
-                        }
-
-                        if root.port-options.length > 0: Rectangle {
-                            height: 76px;
-                            border-radius: 10px;
-                            background: #fffafc;
-                            border-width: 1px;
-                            border-color: #f0dfe6;
-                            ScrollView {
-                                width: parent.width;
-                                height: parent.height;
-                                VerticalLayout {
-                                    padding: 6px;
-                                    spacing: 4px;
-                                    for port[index] in root.port-options: CuteButton {
-                                        height: 28px;
-                                        label: port;
-                                        active: root.port-text == port;
-                                        enabled: !root.busy;
-                                        clicked => { root.select-port(index); }
-                                    }
-                                }
-                            }
-                        }
-
-                        Text { text: "Merged image (.bin)"; color: #6f6474; font-size: 11px; font-weight: 700; }
-                        HorizontalLayout {
-                            spacing: 8px;
-                            Rectangle {
-                                horizontal-stretch: 1;
-                                height: 36px;
-                                border-radius: 10px;
-                                background: #fffdfd;
-                                border-width: 1px;
-                                border-color: #f0dfe6;
-                                if root.file-text == "": Text {
-                                    x: 12px;
-                                    y: 0px;
-                                    height: parent.height;
-                                    text: "xwr64xx_mmw_demo.bin";
-                                    color: #b7a8b3;
-                                    font-size: 12px;
-                                    vertical-alignment: center;
-                                }
-                                LineEdit {
-                                    x: 8px;
-                                    y: 2px;
-                                    width: parent.width - 16px;
-                                    height: parent.height - 4px;
-                                    text <=> root.file-text;
-                                    enabled: !root.busy;
-                                }
-                            }
-                            CuteButton {
-                                width: 76px;
-                                label: "File";
-                                enabled: !root.busy;
-                                clicked => { root.browse-file(); }
-                            }
-                        }
-
-                        ToggleRow {
-                            label: "Erase serial flash before write";
-                            checked <=> root.erase-first;
-                            enabled: !root.busy;
-                        }
-
-                        ToggleRow {
-                            label: "Verify bootloader ACK / status";
-                            checked <=> root.verify-status;
-                            enabled: !root.busy;
                         }
                     }
                 }
 
-                Rectangle {
-                    horizontal-stretch: 1;
-                    border-radius: 12px;
-                    background: #ffffff;
-                    border-width: 1px;
-                    border-color: #f0dfe6;
-
-                    VerticalLayout {
-                        padding: 16px;
-                        spacing: 12px;
-
-                        Text { text: "Download"; color: #25223a; font-size: 16px; font-weight: 820; }
-                        Text { text: "Classic xWR UART ROM · merged image only"; color: #7b7080; font-size: 12px; }
-
-                        Rectangle {
-                            height: 12px;
-                            border-radius: 6px;
-                            background: #f4edf2;
-                            Rectangle {
-                                height: parent.height;
-                                width: max(4px, parent.width * root.progress / 100);
-                                border-radius: 6px;
-                                background: #ff8ca8;
-                                animate width { duration: 160ms; easing: ease-out; }
-                            }
-                        }
-
-                        Rectangle {
-                            vertical-stretch: 1;
-                            border-radius: 10px;
-                            background: #fffafc;
-                            border-width: 1px;
-                            border-color: #f1dde5;
-
-                            Text {
-                                x: 12px;
-                                y: 12px;
-                                width: parent.width - 24px;
-                                height: parent.height - 24px;
-                                text: root.log-text;
-                                color: #51495a;
-                                font-size: 12px;
-                                wrap: word-wrap;
-                                vertical-alignment: top;
-                            }
-                        }
-
-                        CuteButton {
-                            height: 42px;
-                            label: root.busy ? "Flashing..." : "Flash image";
-                            enabled: !root.busy;
-                            clicked => { root.start-flash(); }
-                        }
+                Text { text: "Image"; color: #6f6474; font-size: 10px; font-weight: 740; }
+                HorizontalLayout {
+                    spacing: 8px;
+                    MiniInput {
+                        horizontal-stretch: 1;
+                        value <=> root.file-text;
+                        placeholder: "image.bin";
+                        enabled: !root.busy;
+                    }
+                    MiniButton {
+                        width: 70px;
+                        label: "File";
+                        enabled: !root.busy;
+                        clicked => { root.browse-file(); }
                     }
                 }
+
+                HorizontalLayout {
+                    spacing: 16px;
+                    MiniToggle {
+                        horizontal-stretch: 1;
+                        label: "Erase";
+                        checked <=> root.erase-first;
+                        enabled: !root.busy;
+                    }
+                    MiniToggle {
+                        horizontal-stretch: 1;
+                        label: "Verify";
+                        checked <=> root.verify-status;
+                        enabled: !root.busy;
+                    }
+                }
+            }
+
+            Rectangle {
+                height: 9px;
+                border-radius: 5px;
+                background: #f4edf2;
+                Rectangle {
+                    height: parent.height;
+                    width: root.progress <= 0 ? 0px : max(4px, parent.width * root.progress / 100);
+                    border-radius: 5px;
+                    background: #ff8ca8;
+                    animate width { duration: 150ms; easing: ease-out; }
+                }
+            }
+
+            Rectangle {
+                vertical-stretch: 1;
+                border-radius: 9px;
+                background: #fffafd;
+                border-width: 1px;
+                border-color: #f0dfe6;
+
+                Text {
+                    x: 10px;
+                    y: 9px;
+                    width: parent.width - 20px;
+                    height: parent.height - 18px;
+                    text: root.log-text;
+                    color: #51495a;
+                    font-size: 12px;
+                    wrap: word-wrap;
+                    vertical-alignment: top;
+                }
+            }
+
+            MiniButton {
+                height: 40px;
+                label: root.busy ? "Flashing..." : "Flash";
+                enabled: !root.busy;
+                clicked => { root.start-flash(); }
             }
         }
     }
